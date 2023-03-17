@@ -108,6 +108,32 @@ function addToCart(req, res) {
     })
 }
 
+function showCart(req, res) {
+    const token = req.headers.authorization;
+    const decoded = jwt.decode(token);
+    const { username } = decoded;
+
+    db.get('SELECT * FROM users WHERE username = ?', [username], (error, row) => {
+        if (error) {
+            res.send('Error1');
+        } else {
+            db.get('SELECT * FROM carts WHERE user_id = ?', [row.user_id], (error, row) => {
+                if (error) {
+                    res.send('Error2');
+                } else {
+                    db.all('SELECT productname, price FROM CartItems JOIN products ON products.product_id = CartItems.product_id WHERE cart_id = ?', [row.cart_id], (error, data) => {
+                        if (error) {
+                            res.send('Error3');
+                        } else {
+                            res.send(data);
+                        }
+                    })
+                }
+            })
+        }
+    })
+}
+
 function createProduct(req, res) {
     const isAdmin = checkAdmin(req, res);
     if (isAdmin) {
@@ -165,6 +191,7 @@ module.exports = {
     register,
     login,
     addToCart,
+    showCart,
     createProduct,
     updateProdut,
     deleteProduct

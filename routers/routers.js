@@ -4,6 +4,7 @@ const Controllers = require('../controllers/controllers');
 const { authenticateToken } = require('../functions/authenticateToken');
 
 router.get('/', Controllers.getRoot);
+router.get('/showcart', Controllers.showCart);
 router.get('/:id', Controllers.getById);
 router.post('/register', Controllers.register);
 router.post('/login', Controllers.login);
