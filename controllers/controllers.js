@@ -133,23 +133,30 @@ function showCart(req, res) {
     const decoded = jwt.decode(token);
     const { username } = decoded;
 
-    db.get('SELECT * FROM users WHERE username = ?', [username], (error, row) => {
+    // db.all(`SELECT productname, price, count
+    // FROM CartItems
+    // JOIN products ON products.product_id = CartItems.product_id
+    // JOIN carts ON carts.cart_id = CartItems.cart_id
+    // JOIN users ON users.user_id = carts.user_id
+    // WHERE users.username = ?`, [username], (error, data) => {
+    //     if (error) {
+    //         res.send(error);
+    //     } else {
+    //         console.log(data)
+    //         res.send(data);
+    //     }
+    // })
+
+    db.all(`SELECT productname, price, count 
+    FROM CartItems 
+    JOIN products ON products.product_id = CartItems.product_id 
+    WHERE cart_id IN 
+    (SELECT cart_id FROM carts WHERE user_id IN 
+    (SELECT user_id FROM users WHERE username = ?))`, [username], (error, data) => {
         if (error) {
-            res.send('Error1');
+            res.send(error);
         } else {
-            db.get('SELECT * FROM carts WHERE user_id = ?', [row.user_id], (error, row) => {
-                if (error) {
-                    res.send('Error2');
-                } else {
-                    db.all('SELECT productname, price, count FROM CartItems JOIN products ON products.product_id = CartItems.product_id WHERE cart_id = ?', [row.cart_id], (error, data) => {
-                        if (error) {
-                            res.send('Error3');
-                        } else {
-                            res.send(data);
-                        }
-                    })
-                }
-            })
+            res.send(data);
         }
     })
 }
