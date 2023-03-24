@@ -8,43 +8,35 @@ function addToCart(req, res) {
     const decoded = jwt.decode(token);
     const { username } = decoded;
 
-    db.get('SELECT * FROM users WHERE username = ?', [username], (error, row) => {
-        if (error) {
-            res.send(error);
-        } else {
-            db.get('SELECT * FROM carts WHERE user_id = ?', [row.user_id], (error, row) => {
-                if (error) {
-                    res.send(error);
-                } else {
-                    const cartId = row.cart_id;
-                    
-                    db.get('SELECT * FROM CartItems WHERE cart_id = ? AND product_id = ?', [cartId, id], (error, row) => {
+    db.get(`SELECT * FROM CartItems WHERE cart_id = 
+    (SELECT cart_id FROM carts WHERE user_id = 
+        (SELECT user_id FROM users WHERE username = ?)) 
+        AND product_id = ?`, [username, id], (error, row) => {
+            if (error) {
+                res.send(error);
+            } else {                            
+                if (row) {
+                    let newCount = row.count + 1;
+
+                    db.run('UPDATE CartItems SET count = ? WHERE product_id = ?', [newCount, id], (error) => {
                         if (error) {
                             res.send(error);
-                        } else {                            
-                            if (row) {
-                                let newCount = row.count + 1;
-
-                                db.run('UPDATE CartItems SET count = ? WHERE product_id = ?', [newCount, id], (error) => {
-                                    if (error) {
-                                        res.send(error);
-                                    } else {
-                                        res.send(JSON.stringify({ status:'Product added'}));
-                                    }
-                                })
-                            } else {
-                                db.run('INSERT INTO CartItems (cart_id, product_id, count) VALUES (?, ?, ?)', [cartId, id, 1], (error) => {
-                                    if (error) {
-                                    res.send(error);
-                                    }
-                                    res.send(JSON.stringify({ status:'Product added'}));
-                                })
-                            }
+                        } else {
+                            res.send(JSON.stringify({ status:'Product added'}));
                         }
                     })
+                } else {
+                    db.run(`INSERT INTO CartItems (cart_id, product_id, count) 
+                    SELECT cart_id, ?, ? FROM carts WHERE user_id = 
+                    (SELECT user_id FROM users WHERE username = ?)`, 
+                    [id, 1, username], (error) => {
+                        if (error) {
+                        res.send(error);
+                        }
+                        res.send(JSON.stringify({ status:'Product added'}));
+                    })
                 }
-            })
-        }
+            }
     })
 }
 
